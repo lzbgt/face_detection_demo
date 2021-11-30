@@ -12,4 +12,3 @@ do
     -DCMAKE_INSTALL_PREFIX=${root}/install && \
     cmake --build ${app}/build  --config Release --target ALL_BUILD INSTALL -j 17
 done
-
