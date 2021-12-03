@@ -88,10 +88,11 @@ int main(int argc, const char **argv) {
             Mat frame1 = frame.clone();
             detectAndDraw(frame1, cascade, nestedCascade, scale, guiShow);
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-            char c = (char)waitKey(10);
-            if (c == 27 || c == 'q' || c == 'Q')
-                break;
+            if (guiShow) {
+                char c = (char)waitKey(10);
+                if (c == 27 || c == 'q' || c == 'Q')
+                    break;
+            }
         }
     } else {
         cout << "Detecting face(s) in " << inputName << endl;
@@ -131,7 +132,9 @@ int main(int argc, const char **argv) {
 void detectAndDraw(Mat &img, CascadeClassifier &cascade,
                    CascadeClassifier &nestedCascade,
                    double scale, bool guiShow) {
-    double t = 0;
+    static auto lastEvent = std::chrono::system_clock::now();
+    static bool hasEvent = false;
+    static int cnt = 0;
     vector<Rect> faces, faces2;
     const static Scalar colors[] =
         {
@@ -150,7 +153,7 @@ void detectAndDraw(Mat &img, CascadeClassifier &cascade,
     resize(gray, smallImg, Size(), fx, fx, INTER_LINEAR_EXACT);
     equalizeHist(smallImg, smallImg);
 
-    t = (double)getTickCount();
+    auto now = std::chrono::system_clock::now();
     cascade.detectMultiScale(smallImg, faces,
                              1.1, 2, 0
                                          //|CASCADE_FIND_BIGGEST_OBJECT
@@ -158,27 +161,37 @@ void detectAndDraw(Mat &img, CascadeClassifier &cascade,
                                          | CASCADE_SCALE_IMAGE,
                              Size(30, 30));
 
-    // if (tryflip)
-    // {
-    //     flip(smallImg, smallImg, 1);
-    //     cascade.detectMultiScale(smallImg, faces2,
-    //                              1.1, 2, 0
-    //                                          //|CASCADE_FIND_BIGGEST_OBJECT
-    //                                          //|CASCADE_DO_ROUGH_SEARCH
-    //                                          | CASCADE_SCALE_IMAGE,
-    //                              Size(30, 30));
-    //     for (vector<Rect>::const_iterator r = faces2.begin(); r != faces2.end(); ++r)
-    //     {
-    //         faces.push_back(Rect(smallImg.cols - r->x - r->width, r->y, r->width, r->height));
-    //     }
-    // }
-    t = (double)getTickCount() - t;
+    auto deltaS = std::chrono::duration<double>(now - lastEvent).count();
+    std::cout << "delta: " << deltaS << ", cnt: " << cnt << ", faces: " << faces.size() << std::endl;
 
     if (faces.size() > 0) {
-        EventDetection::getInstance().notify(faces.size());
+        cnt++;
+        if (deltaS >= 1) {
+            if (cnt > 5 * deltaS) {
+                if (!hasEvent) {
+                    hasEvent = true;
+                    EventDetection::getInstance().notify(faces.size());
+                }
+                lastEvent = now;
+                cnt = 0;
+            }
+        }
+    } else {
+        if (!hasEvent) {
+            cnt = 0;
+            lastEvent = now;
+        }
+        if (deltaS >= 3) {
+            if (cnt <= 5 * deltaS) {
+                if (hasEvent) {
+                    EventDetection::getInstance().notify(0);
+                    hasEvent = false;
+                }
+            }
+        }
     }
 
-    printf("detection time = %g ms, got face: %s\n", t * 1000 / getTickFrequency(), faces.size() > 0 ? "true" : "fase");
+    // printf("detection time = %g ms, got face: %s\n", t * 1000 / getTickFrequency(), faces.size() > 0 ? "true" : "fase");
 
     if (guiShow) {
         for (size_t i = 0; i < faces.size(); i++) {

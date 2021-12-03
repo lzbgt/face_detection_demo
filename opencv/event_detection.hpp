@@ -51,6 +51,12 @@ class EventDetection {
                 auto cnt = this->q.take();
                 json data;
                 data["cnt"] = cnt;
+                if (cnt > 0) {
+                    data["event"] = "face_on";
+                } else {
+                    data["event"] = "face_off";
+                }
+
                 const std::string_view m = data.dump();
                 std::cout << "sent: " << m << std::endl;
                 sock.send(zmq::buffer(m), zmq::send_flags::dontwait);
