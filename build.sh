@@ -9,6 +9,6 @@ do
     -G "Visual Studio 16 2019" \
     -T host=x86 -A x64 \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=${root}/install && \
+    -DCMAKE_INSTALL_PREFIX=install &&\
     cmake --build ${app}/build  --config Release --target ALL_BUILD INSTALL -j 17
 done

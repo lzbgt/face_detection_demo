@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "C:/Program Files/dlib_project/include",
-                "C:/Users/lzbgt/work/github.com/opencv/build/install/include"
+                "C:/Users/lzbgt/work/github.com/opencv/install/include",
+                "C:/Users/lzbgt/work/github.com/install/include"
             ],
             "defines": [
                 "_DEBUG",
