@@ -21,6 +21,16 @@ void detectAndDraw(Mat &img, CascadeClassifier &cascade,
 string cascadeName;
 string nestedCascadeName;
 
+static void help() {
+    std::cout << "facedetector.exe [--show] [--gap=16] \n"
+                 "\t--show show gui\n"
+                 "\t--gap=<seconds> seconds of no face to enter into idle"
+              << endl;
+}
+
+static int gapSecs = 8;
+static bool showDebug = false;
+
 int main(int argc, const char **argv) {
     VideoCapture capture;
     Mat frame, image;
@@ -34,11 +44,19 @@ int main(int argc, const char **argv) {
     cv::CommandLineParser parser(argc, argv,
                                  "{help h||}"
                                  "{show s||}"
+                                 "{gap|8|}"
+                                 "{dbg d||}"
                                  "{cascade|data/haarcascades/haarcascade_frontalface_alt.xml|}"
                                  "{nested-cascade|data/haarcascades/haarcascade_eye_tree_eyeglasses.xml|}"
                                  "{scale|1|}{try-flip||}{@filename||}");
 
+    if (parser.has("help")) {
+        help();
+        exit(0);
+    }
     bool guiShow = parser.has("show");
+    showDebug = parser.has("dbg");
+    gapSecs = parser.get<int>("gap");
     auto pathPrefix = std::string(modPath.begin(), modPath.end()) + std::string("\\");
     cascadeName = pathPrefix + parser.get<string>("cascade");
     nestedCascadeName = pathPrefix + parser.get<string>("nested-cascade");
@@ -162,7 +180,8 @@ void detectAndDraw(Mat &img, CascadeClassifier &cascade,
                              Size(30, 30));
 
     auto deltaS = std::chrono::duration<double>(now - lastEvent).count();
-    std::cout << "delta: " << deltaS << ", cnt: " << cnt << ", faces: " << faces.size() << std::endl;
+    if (showDebug)
+        std::cout << "delta: " << deltaS << ", cnt: " << cnt << ", faces: " << faces.size() << std::endl;
 
     if (faces.size() > 0) {
         cnt++;
@@ -181,17 +200,18 @@ void detectAndDraw(Mat &img, CascadeClassifier &cascade,
             cnt = 0;
             lastEvent = now;
         }
-        if (deltaS >= 3) {
+        if (deltaS >= gapSecs) {
             if (cnt <= 5 * deltaS) {
                 if (hasEvent) {
                     EventDetection::getInstance().notify(0);
                     hasEvent = false;
                 }
             }
+            // reset
+            cnt = 0;
+            lastEvent = now;
         }
     }
-
-    // printf("detection time = %g ms, got face: %s\n", t * 1000 / getTickFrequency(), faces.size() > 0 ? "true" : "fase");
 
     if (guiShow) {
         for (size_t i = 0; i < faces.size(); i++) {
